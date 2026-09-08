@@ -13,6 +13,7 @@ import json
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from pydantic import ValidationError
 
@@ -31,6 +32,14 @@ app = FastAPI(
         "`POST /excel/preview` để kiểm tra file Excel → `POST /jobs` để bắt đầu gửi → "
         "`GET /jobs/{job_id}` để theo dõi tiến độ."
     ),
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 ALLOWED_EXTENSIONS = (".xlsx", ".xlsm")
