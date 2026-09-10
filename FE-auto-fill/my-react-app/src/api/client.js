@@ -2,7 +2,7 @@
  * API client module for Auto Fill Google Forms Backend.
  */
 
-const DEFAULT_BASE_URL = 'http://127.0.0.1:8000';
+const DEFAULT_BASE_URL = 'https://auto-fill-bayj.onrender.com';
 
 export function getApiBaseUrl() {
   return localStorage.getItem('autofill_api_url') || DEFAULT_BASE_URL;
