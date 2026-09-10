@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlayCircle, CheckCircle2, XCircle, AlertOctagon, Clock, HelpCircle, FileText, CheckSquare, List, Calendar, ArrowRightLeft } from 'lucide-react';
+import { PlayCircle, PauseCircle, CheckCircle2, XCircle, AlertOctagon, Clock, HelpCircle, FileText, CheckSquare, List, Calendar, ArrowRightLeft } from 'lucide-react';
 
 export function JobStatusBadge({ status }) {
   switch (status) {
@@ -8,6 +8,13 @@ export function JobStatusBadge({ status }) {
         <span className="badge badge-primary">
           <span className="pulse-dot pulse-running" />
           Đang chạy
+        </span>
+      );
+    case 'paused':
+      return (
+        <span className="badge badge-warning" style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', borderColor: 'rgba(245, 158, 11, 0.4)', color: '#fcd34d' }}>
+          <PauseCircle size={13} />
+          Tạm dừng
         </span>
       );
     case 'completed':

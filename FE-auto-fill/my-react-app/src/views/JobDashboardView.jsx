@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   PlayCircle,
+  Pause,
+  Play,
   Clock,
   CheckCircle2,
   XCircle,
@@ -48,6 +50,28 @@ export function JobDashboardView({ onNewJobClick, selectedJobId, setSelectedJobI
       setModalJobId(selectedJobId);
     }
   }, [selectedJobId]);
+
+  const handlePauseJob = async (jobId, e) => {
+    e.stopPropagation();
+    try {
+      await api.pauseJob(jobId);
+      toast.warning(`Đã tạm dừng job #${jobId}`);
+      fetchJobs();
+    } catch (err) {
+      toast.error(err.message || 'Lỗi tạm dừng job');
+    }
+  };
+
+  const handleResumeJob = async (jobId, e) => {
+    e.stopPropagation();
+    try {
+      await api.resumeJob(jobId);
+      toast.success(`Tiếp tục gửi job #${jobId}`);
+      fetchJobs();
+    } catch (err) {
+      toast.error(err.message || 'Lỗi tiếp tục job');
+    }
+  };
 
   const handleCancelJob = async (jobId, e) => {
     e.stopPropagation();
@@ -136,7 +160,7 @@ export function JobDashboardView({ onNewJobClick, selectedJobId, setSelectedJobI
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <Filter size={16} style={{ color: 'var(--text-dim)' }} />
           <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>Lọc trạng thái:</span>
-          {['all', 'running', 'completed', 'failed', 'cancelled'].map((status) => (
+          {['all', 'running', 'paused', 'completed', 'failed', 'cancelled'].map((status) => (
             <button
               key={status}
               className={`btn btn-sm ${statusFilter === status ? 'btn-primary' : 'btn-ghost'}`}
@@ -147,6 +171,8 @@ export function JobDashboardView({ onNewJobClick, selectedJobId, setSelectedJobI
                 ? 'Tất cả'
                 : status === 'running'
                 ? 'Đang chạy'
+                : status === 'paused'
+                ? 'Tạm dừng'
                 : status === 'completed'
                 ? 'Hoàn thành'
                 : status === 'failed'
@@ -218,6 +244,8 @@ export function JobDashboardView({ onNewJobClick, selectedJobId, setSelectedJobI
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '14px' }}>
           {filteredJobs.map((job) => {
             const isRunning = job.status === 'running' || job.status === 'pending';
+            const isPaused = job.status === 'paused';
+            const isActive = isRunning || isPaused;
             return (
               <div
                 key={job.job_id}
@@ -228,8 +256,16 @@ export function JobDashboardView({ onNewJobClick, selectedJobId, setSelectedJobI
                   flexDirection: 'column',
                   gap: '12px',
                   cursor: 'pointer',
-                  border: isRunning ? '1px solid rgba(99, 102, 241, 0.4)' : undefined,
-                  boxShadow: isRunning ? '0 0 15px rgba(99, 102, 241, 0.2)' : undefined,
+                  border: job.status === 'running'
+                    ? '1px solid rgba(99, 102, 241, 0.4)'
+                    : isPaused
+                    ? '1px solid rgba(245, 158, 11, 0.4)'
+                    : undefined,
+                  boxShadow: job.status === 'running'
+                    ? '0 0 15px rgba(99, 102, 241, 0.2)'
+                    : isPaused
+                    ? '0 0 15px rgba(245, 158, 11, 0.15)'
+                    : undefined,
                 }}
                 onClick={() => setModalJobId(job.job_id)}
               >
@@ -288,18 +324,18 @@ export function JobDashboardView({ onNewJobClick, selectedJobId, setSelectedJobI
                   showLabel={true}
                 />
 
-                {/* Next action ticker if running */}
-                {job.next_action && isRunning && (
+                {/* Next action ticker if active */}
+                {job.next_action && isActive && (
                   <div
                     style={{
                       fontSize: '0.725rem',
-                      color: 'var(--accent-cyan)',
+                      color: isPaused ? '#fcd34d' : 'var(--accent-cyan)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
                     }}
                   >
-                    <Clock size={11} className="spin" />
+                    <Clock size={11} className={isPaused ? '' : 'spin'} />
                     <span className="mono">{job.next_action}</span>
                   </div>
                 )}
@@ -319,12 +355,47 @@ export function JobDashboardView({ onNewJobClick, selectedJobId, setSelectedJobI
                     {job.created_at ? new Date(job.created_at).toLocaleTimeString() : ''}
                   </span>
 
-                  <div style={{ display: 'flex', gap: '6px' }} onClick={(e) => e.stopPropagation()}>
-                    {isRunning ? (
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                    {job.status === 'running' && (
+                      <button
+                        className="btn btn-warning btn-sm"
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '0.725rem',
+                          backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                          borderColor: 'rgba(245, 158, 11, 0.4)',
+                          color: '#fcd34d',
+                        }}
+                        onClick={(e) => handlePauseJob(job.job_id, e)}
+                        title="Tạm dừng gửi"
+                      >
+                        <Pause size={12} />
+                        Tạm dừng
+                      </button>
+                    )}
+
+                    {job.status === 'paused' && (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        style={{
+                          padding: '3px 8px',
+                          fontSize: '0.725rem',
+                          background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+                        }}
+                        onClick={(e) => handleResumeJob(job.job_id, e)}
+                        title="Tiếp tục gửi"
+                      >
+                        <Play size={12} />
+                        Tiếp tục
+                      </button>
+                    )}
+
+                    {isActive ? (
                       <button
                         className="btn btn-danger btn-sm"
                         style={{ padding: '3px 8px', fontSize: '0.725rem' }}
                         onClick={(e) => handleCancelJob(job.job_id, e)}
+                        title="Huỷ job"
                       >
                         Huỷ
                       </button>
@@ -338,6 +409,7 @@ export function JobDashboardView({ onNewJobClick, selectedJobId, setSelectedJobI
                         <Trash2 size={13} />
                       </button>
                     )}
+
                     <button
                       className="btn btn-secondary btn-sm"
                       style={{ padding: '3px 8px', fontSize: '0.725rem' }}

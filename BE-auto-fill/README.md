@@ -134,6 +134,8 @@ curl -X POST http://127.0.0.1:8000/jobs/<job_id>/cancel
 | GET | `/jobs` | Danh sách job |
 | GET | `/jobs/{id}` | Trạng thái, tiến độ, log |
 | GET | `/jobs/{id}/payloads` | Payload đã tạo |
+| POST | `/jobs/{id}/pause` | Tạm dừng job đang chạy |
+| POST | `/jobs/{id}/resume` | Tiếp tục job đang tạm dừng |
 | POST | `/jobs/{id}/cancel` | Huỷ job |
 | DELETE | `/jobs/{id}` | Xoá job đã kết thúc |
 

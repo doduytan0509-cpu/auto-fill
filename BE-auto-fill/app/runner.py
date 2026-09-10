@@ -178,6 +178,8 @@ class Job:
         self.options = options
         self._lock = threading.Lock()
         self._cancel = threading.Event()
+        self._pause_event = threading.Event()
+        self._pause_event.set()
         self._thread: threading.Thread | None = None
 
         self.status: str = "pending"
@@ -210,14 +212,47 @@ class Job:
             if len(self.logs) > MAX_LOG_LINES:
                 del self.logs[: len(self.logs) - MAX_LOG_LINES]
 
+    def _wait_while_paused(self) -> None:
+        """Wait while the job is paused until resumed or cancelled."""
+        while not self._pause_event.is_set():
+            if self._cancel.is_set():
+                return
+            time.sleep(0.1)
+
     def _sleep(self, seconds: float) -> bool:
-        """Sleep but wake up early if cancelled. Returns True if cancelled."""
+        """Sleep but wake up early if cancelled or handle pause. Returns True if cancelled."""
         if seconds <= 0:
             return self._cancel.is_set()
-        return self._cancel.wait(seconds)
+        end_time = time.time() + seconds
+        while time.time() < end_time:
+            if self._cancel.is_set():
+                return True
+            if not self._pause_event.is_set():
+                self._wait_while_paused()
+                if self._cancel.is_set():
+                    return True
+            time.sleep(min(0.1, max(0.01, end_time - time.time())))
+        return self._cancel.is_set()
+
+    def pause(self) -> None:
+        with self._lock:
+            if self.status != "running":
+                return
+            self.status = "paused"
+            self.next_action = "Đang tạm dừng"
+            self._pause_event.clear()
+
+    def resume(self) -> None:
+        with self._lock:
+            if self.status != "paused":
+                return
+            self.status = "running"
+            self.next_action = ""
+            self._pause_event.set()
 
     def cancel(self) -> None:
         self._cancel.set()
+        self._pause_event.set()
 
     @property
     def is_finished(self) -> bool:
@@ -280,6 +315,10 @@ class Job:
 
         try:
             for i, row in enumerate(self.rows):
+                if self._cancel.is_set():
+                    break
+                if not self._pause_event.is_set():
+                    self._wait_while_paused()
                 if self._cancel.is_set():
                     break
                 row_no = self.row_offset + i + 1  # 1-based data row number

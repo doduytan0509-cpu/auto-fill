@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   PlayCircle,
+  Pause,
+  Play,
   Clock,
   Terminal,
   AlertTriangle,
@@ -32,6 +34,8 @@ export function JobDetailModal({ jobId, isOpen, onClose, onJobDeleted }) {
   const [logFilter, setLogFilter] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [pausing, setPausing] = useState(false);
+  const [resuming, setResuming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [copiedPayloadIndex, setCopiedPayloadIndex] = useState(null);
 
@@ -79,6 +83,32 @@ export function JobDetailModal({ jobId, isOpen, onClose, onJobDeleted }) {
       toast.error(`Lỗi tải payload: ${err.message}`);
     } finally {
       setLoadingPayloads(false);
+    }
+  };
+
+  const handlePause = async () => {
+    setPausing(true);
+    try {
+      const updated = await api.pauseJob(jobId);
+      setJob(updated);
+      toast.warning('Đã tạm dừng job');
+    } catch (err) {
+      toast.error(err.message || 'Không thể tạm dừng job');
+    } finally {
+      setPausing(false);
+    }
+  };
+
+  const handleResume = async () => {
+    setResuming(true);
+    try {
+      const updated = await api.resumeJob(jobId);
+      setJob(updated);
+      toast.success('Tiếp tục chạy job');
+    } catch (err) {
+      toast.error(err.message || 'Không thể tiếp tục job');
+    } finally {
+      setResuming(false);
     }
   };
 
@@ -471,7 +501,7 @@ export function JobDetailModal({ jobId, isOpen, onClose, onJobDeleted }) {
         {/* Footer Actions */}
         <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
           <div>
-            {job && job.status !== 'running' && job.status !== 'pending' && (
+            {job && job.status !== 'running' && job.status !== 'pending' && job.status !== 'paused' && (
               <button
                 className="btn btn-danger btn-sm"
                 onClick={handleDelete}
@@ -483,17 +513,49 @@ export function JobDetailModal({ jobId, isOpen, onClose, onJobDeleted }) {
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {isRunning && (
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {job?.status === 'running' && (
+              <button
+                className="btn btn-warning"
+                onClick={handlePause}
+                disabled={pausing}
+                style={{
+                  backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                  borderColor: 'rgba(245, 158, 11, 0.4)',
+                  color: '#fcd34d',
+                }}
+              >
+                <Pause size={16} />
+                {pausing ? 'Đang tạm dừng...' : 'Tạm dừng'}
+              </button>
+            )}
+
+            {job?.status === 'paused' && (
+              <button
+                className="btn btn-primary"
+                onClick={handleResume}
+                disabled={resuming}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                }}
+              >
+                <Play size={16} />
+                {resuming ? 'Đang tiếp tục...' : 'Tiếp tục gửi'}
+              </button>
+            )}
+
+            {(job?.status === 'running' || job?.status === 'pending' || job?.status === 'paused') && (
               <button
                 className="btn btn-danger"
                 onClick={handleCancel}
                 disabled={cancelling}
               >
                 <XCircle size={16} />
-                {cancelling ? 'Đang huỷ...' : 'Huỷ Job đang chạy'}
+                {cancelling ? 'Đang huỷ...' : 'Huỷ Job'}
               </button>
             )}
+
             <button className="btn btn-secondary" onClick={onClose}>
               Đóng
             </button>

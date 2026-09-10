@@ -315,6 +315,34 @@ def job_payloads(job_id: str, limit: int = Query(20, ge=1, le=1000)) -> dict[str
     return {"job_id": job_id, "count": len(job.payloads), "payloads": job.payloads[:limit]}
 
 
+@app.post("/jobs/{job_id}/pause", tags=["jobs"], response_model=JobStatus)
+def pause_job(job_id: str) -> JobStatus:
+    job = manager.get(job_id)
+    if job is None:
+        raise HTTPException(404, "Không tìm thấy job.")
+    if job.is_finished:
+        raise HTTPException(409, f"Job đã kết thúc với trạng thái '{job.status}'.")
+    if job.status != "running":
+        raise HTTPException(409, f"Không thể tạm dừng job ở trạng thái '{job.status}'.")
+    job.pause()
+    job.log("Nhận yêu cầu tạm dừng job.")
+    return job.snapshot()
+
+
+@app.post("/jobs/{job_id}/resume", tags=["jobs"], response_model=JobStatus)
+def resume_job(job_id: str) -> JobStatus:
+    job = manager.get(job_id)
+    if job is None:
+        raise HTTPException(404, "Không tìm thấy job.")
+    if job.is_finished:
+        raise HTTPException(409, f"Job đã kết thúc với trạng thái '{job.status}'.")
+    if job.status != "paused":
+        raise HTTPException(409, f"Không thể tiếp tục job ở trạng thái '{job.status}'.")
+    job.resume()
+    job.log("Nhận yêu cầu tiếp tục gửi form.")
+    return job.snapshot()
+
+
 @app.post("/jobs/{job_id}/cancel", tags=["jobs"], response_model=JobStatus)
 def cancel_job(job_id: str) -> JobStatus:
     job = manager.get(job_id)

@@ -178,6 +178,14 @@ export const api = {
     return request(`/jobs/${jobId}/payloads?limit=${limit}`, { method: 'GET' }, customBaseUrl);
   },
 
+  async pauseJob(jobId, customBaseUrl = null) {
+    return request(`/jobs/${jobId}/pause`, { method: 'POST' }, customBaseUrl);
+  },
+
+  async resumeJob(jobId, customBaseUrl = null) {
+    return request(`/jobs/${jobId}/resume`, { method: 'POST' }, customBaseUrl);
+  },
+
   async cancelJob(jobId, customBaseUrl = null) {
     return request(`/jobs/${jobId}/cancel`, { method: 'POST' }, customBaseUrl);
   },

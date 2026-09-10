@@ -88,7 +88,7 @@ class JobFailure(BaseModel):
 
 class JobStatus(BaseModel):
     job_id: str
-    status: Literal["pending", "running", "completed", "failed", "cancelled"]
+    status: Literal["pending", "running", "paused", "completed", "failed", "cancelled"]
     form_url: str
     form_title: str = ""
     sheet_name: str = ""
